@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout.jsx';
 import FormField from '../components/FormField.jsx';
 import PasswordToggle from '../components/PasswordToggle.jsx';
@@ -9,7 +9,6 @@ import PrimaryButton from '../components/PrimaryButton.jsx';
 const API_AUTH_URL = import.meta.env.VITE_API_AUTH_URL || 'http://localhost:3000/api/auth';
 
 export default function LoginPage() {
-  const navigate = useNavigate();
   const [form, setForm] = useState({ correo: '', carnet: '', password: '' });
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,7 +51,7 @@ export default function LoginPage() {
       users = users.filter(item => String(item.id) !== String(result.usuario.id));
       users.push(result.usuario);
       localStorage.setItem('usuarios', JSON.stringify(users));
-      navigate('/dashboard.html');
+      window.location.assign('/dashboard.html');
     } catch {
       setMessage('No se pudo conectar con BackToMe. Confirma que el servidor esté activo.');
     } finally {
