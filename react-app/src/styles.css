@@ -1,0 +1,23 @@
+@import './acceso.css';
+
+button:disabled {
+  opacity: .7;
+  cursor: wait;
+}
+.field input:focus-visible {
+  outline: 2px solid #67a9d4;
+  outline-offset: 1px;
+}
+.field input {
+  min-width: 0;
+}
+@media (max-width: 800px) {
+  .register-wrap .field-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 360px) {
+  .register-wrap .field-grid {
+    grid-template-columns: 1fr;
+  }
+}
