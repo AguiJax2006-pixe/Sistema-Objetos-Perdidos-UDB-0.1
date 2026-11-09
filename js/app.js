@@ -100,7 +100,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function fuenteFoto(objeto) {
         const foto = objeto?.foto || objeto?.imagen || "";
-        return /^data:image\/(png|jpeg|webp|gif);base64,/i.test(foto) ? foto : "";
+        if (/^data:image\/(png|jpeg|webp|gif);base64,/i.test(foto)) return foto;
+        try {
+            const url = new URL(foto);
+            return url.protocol === "https:" && url.hostname === "res.cloudinary.com" ? url.href : "";
+        } catch {
+            return "";
+        }
     }
 
     function bloqueFoto(objeto, clase = "") {

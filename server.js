@@ -41,6 +41,35 @@ function crearTransportadorCorreo() {
     });
 }
 
+function cloudinaryConfigurado() {
+    return Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+}
+
+async function subirFotoCloudinary(fotoDataUrl) {
+    const coincidencia = fotoDataUrl.match(/^data:image\/(jpeg|png|webp);base64,([a-z0-9+/]+=*)$/i);
+    if (!coincidencia) throw new Error('La foto no tiene un formato válido.');
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    const timestamp = Math.floor(Date.now() / 1000);
+    const folder = 'backtome/objetos';
+    const signature = crypto.createHash('sha1').update(`folder=${folder}&timestamp=${timestamp}${apiSecret}`).digest('hex');
+    const bytes = Buffer.from(coincidencia[2], 'base64');
+    const formulario = new FormData();
+    formulario.append('file', new Blob([bytes], { type: `image/${coincidencia[1].toLowerCase()}` }), 'objeto.jpg');
+    formulario.append('api_key', apiKey);
+    formulario.append('timestamp', String(timestamp));
+    formulario.append('folder', folder);
+    formulario.append('signature', signature);
+
+    const respuesta = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cloudName)}/image/upload`, { method: 'POST', body: formulario });
+    const resultado = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok || typeof resultado.secure_url !== 'string') {
+        throw new Error('Cloudinary no aceptó la imagen. Revisa la configuración e inténtalo de nuevo.');
+    }
+    return resultado.secure_url;
+}
+
 function escaparHtml(valor) {
     return String(valor)
         .replace(/&/g, '&amp;')
@@ -576,10 +605,24 @@ app.post('/api/objects', exigirSesion, async (req, res) => {
     }
 
     try {
+        let fotoGuardada = foto || null;
+        const cloudinaryVariables = [process.env.CLOUDINARY_CLOUD_NAME, process.env.CLOUDINARY_API_KEY, process.env.CLOUDINARY_API_SECRET];
+        const hayConfiguracionCloudinary = cloudinaryVariables.some(Boolean);
+        if (foto && hayConfiguracionCloudinary && !cloudinaryConfigurado()) {
+            return res.status(503).json({ mensaje: 'Falta completar la configuración de Cloudinary en el archivo .env.' });
+        }
+        if (foto && cloudinaryConfigurado()) {
+            try {
+                fotoGuardada = await subirFotoCloudinary(foto);
+            } catch (error) {
+                console.error('Error al subir foto a Cloudinary:', error.message);
+                return res.status(502).json({ mensaje: error.message || 'No se pudo guardar la foto en Cloudinary.' });
+            }
+        }
         const [resultado] = await conexion.execute(
             "INSERT INTO objetos (usuario_id, tipo, titulo, descripcion, categoria, foto_url, lugar, fecha_del_suceso, estado) " +
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'publicado')",
-            [req.usuario.id, tipoVisible === 'Encontrado' ? 'encontrado' : 'perdido', nombre, descripcion, categoria, foto || null, ubicacion, fecha]
+            [req.usuario.id, tipoVisible === 'Encontrado' ? 'encontrado' : 'perdido', nombre, descripcion, categoria, fotoGuardada, ubicacion, fecha]
         );
         res.status(201).json({ id: resultado.insertId, mensaje: 'Publicación guardada.' });
     } catch (error) {
