@@ -1,201 +1,83 @@
-# BackToMe – Sistema de Objetos Perdidos UDB
+# BackToMe — objetos perdidos y encontrados UDB
 
-## Descripción del proyecto
+BackToMe es una aplicación web para que la comunidad de la Universidad Don Bosco publique, busque y gestione reportes de objetos perdidos y encontrados.
 
-**BackToMe** es un sistema web desarrollado para la Universidad Don Bosco (UDB), cuyo propósito es facilitar la publicación, búsqueda y recuperación de objetos perdidos dentro de la comunidad universitaria.
+## Aporte individual y trabajo del equipo
 
-La plataforma permite gestionar objetos extraviados y encontrados, así como facilitar la comunicación entre los estudiantes mediante una interfaz web.
+### Mi aporte individual: integración de Cloudinary
 
-## Objetivo
+Integré Cloudinary para almacenar las fotografías adjuntas a los reportes de objetos. Al publicar un objeto, el servidor valida la imagen y la envía a Cloudinary mediante su API de carga. La base de datos guarda la URL segura que devuelve el servicio, y la aplicación utiliza esa URL para mostrar la foto.
 
-Desarrollar una aplicación web que facilite el proceso de recuperación de objetos perdidos, ofreciendo una plataforma accesible, organizada y adaptable a diferentes dispositivos.
+La solicitud a Cloudinary se realiza desde el servidor. La clave secreta no se expone en React ni en el navegador. Si Cloudinary no está configurado, el servidor conserva el mecanismo local anterior para guardar la foto en la base de datos.
 
-## Tecnologías utilizadas
+### Framework del proyecto: React
 
-### Frontend
-- HTML5
-- CSS3
-- JavaScript
-- React
-- Vite
-- Bootstrap
+El equipo eligió React 19 para las pantallas de inicio de sesión y registro, junto con Vite y React Router. Estas pantallas usan componentes reutilizables para campos, botones, alertas, diseño de acceso, cambio de tema y visibilidad de contraseña, y consumen la API del servidor para registrar e iniciar sesión. Después de un inicio correcto, se abre el dashboard existente.
 
-### Backend
-- Node.js
-- Express.js
+La migración a React cubre las pantallas de acceso de esta entrega. El dashboard y los módulos de objetos, solicitudes y mensajes conservan su implementación previa en HTML, CSS y JavaScript.
 
-### Base de datos
-- MySQL
+## Funciones principales
 
-### Herramientas de desarrollo
-- Visual Studio Code
-- Git
-- GitHub
-- XAMPP
-- phpMyAdmin
+- Registro con nombre, apellido, carnet, carrera, correo y contraseña.
+- Verificación del correo electrónico antes de iniciar sesión.
+- Inicio de sesión y manejo de sesiones mediante la API del servidor.
+- Publicación y búsqueda de objetos perdidos y encontrados, con foto, categoría, descripción, ubicación y fecha.
+- Gestión de publicaciones propias.
+- Envío y respuesta a solicitudes, y conversación entre participantes.
+- Interfaz adaptable, con tema claro y oscuro.
 
-## Implementación de React – Andrea
+## Tecnologías
 
-Como parte de la migración del proyecto al framework React, se desarrolló una estructura inicial para organizar las pantallas y los componentes reutilizables.
+- **Frontend de acceso:** React, React Router y Vite.
+- **Módulos existentes:** HTML, CSS y JavaScript.
+- **Servidor:** Node.js y Express.
+- **Base de datos:** MySQL/MariaDB, conectada con `mysql2`.
+- **Fotos:** API de carga de imágenes de Cloudinary.
+- **Correo:** Nodemailer para verificación de cuentas.
 
-### Actividades realizadas
+## Carpetas y archivos
 
-1. Configuración de la estructura inicial de React y Vite.
-2. Creación de componentes reutilizables.
-3. Desarrollo de una estructura visual compartida.
-4. Migración de la pantalla de inicio de sesión.
-5. Migración de la pantalla de registro.
-6. Adaptación del diseño para diferentes tamaños de pantalla.
-7. Implementación de estilos y elementos visuales compartidos.
-8. Preparación de la integración con el backend existente.
+- `react-app/`: aplicación React, rutas, páginas y componentes reutilizables.
+- `server.js`: servidor Express, endpoints, conexión a base de datos y carga segura de imágenes a Cloudinary.
+- `js/` y `css/`: comportamiento y estilos de los módulos existentes.
+- `database/`: migraciones SQL para los campos del registro, sesiones y fotos.
+- `documentacion/`: documento de investigación sobre las librerías JavaScript.
+- `imagenes.img/`: recursos gráficos del proyecto.
+- `.env.example`: plantilla de configuración sin credenciales reales.
 
-### Componentes desarrollados
+## Configuración local
 
-| Componente | Descripción |
-|---|---|
-| AuthLayout | Estructura compartida de autenticación |
-| Brand | Identidad visual de BackToMe |
-| StoryPanel | Panel visual informativo |
-| FormField | Campos reutilizables de formulario |
-| PasswordToggle | Mostrar u ocultar contraseñas |
-| PrimaryButton | Botón principal reutilizable |
-| Alert | Mensajes de información y errores |
-| ThemeToggle | Control del tema visual |
+Se necesita Node.js 18 o posterior, npm y una base MySQL/MariaDB con el esquema inicial del proyecto.
 
-### Páginas desarrolladas
+1. Copia `.env.example` como `.env` y completa localmente las credenciales de la base de datos, el correo y Cloudinary. No subas `.env` a GitHub.
+2. Instala las dependencias desde la carpeta raíz:
 
-- LoginPage.jsx: pantalla de inicio de sesión.
-- RegisterPage.jsx: pantalla de registro.
+   ```bash
+   npm install
+   ```
 
-## Estructura del proyecto React
+3. Si la base todavía no tiene los campos y la tabla de sesiones requeridos, pide a una cuenta con permisos administrativos que ejecute, en la base `backtome`, `database/auth-migration.sql` y `database/contenido-migration.sql`. No vuelvas a ejecutar cambios ya aplicados.
+4. Inicia el backend en una terminal:
 
-```text
-react-app/
-├── public/
-│   ├── css/
-│   ├── js/
-│   ├── imagenes.img/
-│   └── dashboard.html
-│
-├── src/
-│   ├── components/
-│   │   ├── Alert.jsx
-│   │   ├── AuthLayout.jsx
-│   │   ├── Brand.jsx
-│   │   ├── FormField.jsx
-│   │   ├── PasswordToggle.jsx
-│   │   ├── PrimaryButton.jsx
-│   │   ├── StoryPanel.jsx
-│   │   └── ThemeToggle.jsx
-│   │
-│   ├── pages/
-│   │   ├── LoginPage.jsx
-│   │   └── RegisterPage.jsx
-│   │
-│   ├── main.jsx
-│   ├── acceso.css
-│   └── styles.css
-│
-├── index.html
-├── vite.config.js
-└── .env.example
-```
+   ```bash
+   npm start
+   ```
 
-## Instalación y ejecución
+5. Inicia React en otra terminal:
 
-### Requisitos previos
+   ```bash
+   npm run dev
+   ```
 
-- Node.js y npm.
-- MySQL.
-- XAMPP.
-- Visual Studio Code.
+6. Abre `http://localhost:5173/login`.
 
-### 1. Clonar el repositorio
+## Variables de entorno
 
-```bash
-git clone https://github.com/AguiJax2006-pixe/Sistema-Objetos-Perdidos-UDB-0.1.git
-```
+`.env.example` indica las variables necesarias:
 
-### 2. Instalar dependencias
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` y `DB_NAME` para MySQL/MariaDB.
+- `SMTP_USER` y `SMTP_APP_PASSWORD` para enviar el correo de verificación.
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` y `CLOUDINARY_API_SECRET` para guardar las fotos en Cloudinary.
+- `PORT` y `APP_BASE_URL` para la dirección local del servidor.
 
-Desde la carpeta principal del proyecto:
-
-```bash
-npm install
-```
-
-### 3. Configurar las variables de entorno
-
-Crear el archivo `.env` en la raíz del proyecto, utilizando `.env.example` como referencia.
-
-Configurar los datos correspondientes a la base de datos y al servicio de correo electrónico.
-
-Dentro de `react-app`, configurar también las variables de entorno necesarias para React, tomando como referencia su archivo `.env.example`.
-
-No compartir los archivos `.env` ni publicar credenciales privadas.
-
-### 4. Iniciar el backend
-
-```bash
-npm start
-```
-
-El servidor se ejecuta en:
-
-```text
-http://localhost:3000
-```
-
-### 5. Iniciar React
-
-En una segunda terminal:
-
-```bash
-npm run dev
-```
-
-La aplicación estará disponible en:
-
-```text
-http://localhost:5173
-```
-
-### 6. Compilar para producción
-
-```bash
-npm run build
-```
-
-## Trabajo colaborativo
-
-El desarrollo del proyecto se organiza mediante ramas de Git para facilitar el trabajo independiente y la integración de los módulos.
-
-### Rama de Andrea
-
-`feature/react-andrea`
-
-Responsable de la estructura visual, componentes reutilizables y migración de las pantallas de inicio de sesión y registro a React.
-
-### Integración
-
-Los cambios desarrollados en las diferentes ramas serán revisados e integrados mediante Pull Requests.
-
-## Estado de la migración
-
-- Estructura inicial de React: desarrollada.
-- Componentes reutilizables: desarrollados.
-- Inicio de sesión: migrado visualmente.
-- Registro: migrado visualmente.
-- Compilación de producción: comprobada.
-- Integración definitiva con la base de datos y el servicio de correo: pendiente de validación en el entorno integrado.
-
-## Autoras
-
-**Proyecto BackToMe – Universidad Don Bosco**
-
-- Andrea Michelle Jiménez Aguilar
-- Kimberly Alexandra Rivera Lopez
-
-## Repositorio
-
-[GitHub – Sistema de Objetos Perdidos UDB](https://github.com/AguiJax2006-pixe/Sistema-Objetos-Perdidos-UDB-0.1)
+Las credenciales reales se configuran únicamente en el `.env` local, que está excluido mediante `.gitignore`.
