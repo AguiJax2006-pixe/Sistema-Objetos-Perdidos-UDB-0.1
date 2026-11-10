@@ -218,6 +218,19 @@ body {
 .form-switch a:hover {
   text-decoration: underline;
 }
+.recovery-link-wrap {
+  margin: -3px 0 10px;
+  text-align: right;
+  font-size: 12px;
+}
+.recovery-link {
+  color: var(--blue);
+  font-weight: 700;
+  text-decoration: none;
+}
+.recovery-link:hover {
+  text-decoration: underline;
+}
 .verify-note {
   margin: 12px 0;
   padding: 11px;

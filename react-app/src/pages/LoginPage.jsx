@@ -71,6 +71,7 @@ export default function LoginPage() {
         <FormField id="password" label="Contraseña" type={showPassword ? 'text' : 'password'} value={form.password} onChange={update} placeholder="Ingresa tu contraseña" autoComplete="current-password">
           <PasswordToggle visible={showPassword} onToggle={() => setShowPassword(!showPassword)} />
         </FormField>
+        <p className="recovery-link-wrap"><Link className="recovery-link" to="/olvidaste-contrasena">¿Olvidaste tu contraseña?</Link></p>
         <PrimaryButton loading={loading}>Iniciar sesión&nbsp; →</PrimaryButton>
       </form>
       <p className="form-switch">¿Primera vez en BackToMe? <Link to="/registro">Crear una cuenta</Link></p>

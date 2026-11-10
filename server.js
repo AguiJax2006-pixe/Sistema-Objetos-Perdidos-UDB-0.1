@@ -13,6 +13,9 @@ const puerto = Number(process.env.PORT || 3000);
 const direccionAplicacion = (
     process.env.APP_BASE_URL || 'http://localhost:3000'
 ).replace(/\/+$/, '');
+const direccionFrontend = (
+    process.env.APP_FRONTEND_URL || 'http://localhost:5173'
+).replace(/\/+$/, '');
 
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
@@ -414,6 +417,130 @@ app.get('/api/auth/verify', async (req, res) => {
             'No se pudo verificar',
             'Ocurrió un error al verificar el correo. Inténtalo más tarde.'
         );
+    } finally {
+        conexionUsuario.release();
+    }
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+    const correo = String(req.body?.correo || '').trim().toLowerCase();
+    const respuestaGenerica = {
+        mensaje: 'Si existe una cuenta con ese correo, recibirás un enlace para restablecer la contraseña.'
+    };
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+        return res.status(400).json({ mensaje: 'Ingresa un correo electrónico válido.' });
+    }
+
+    if (!correoConfigurado()) {
+        return res.status(503).json({ mensaje: 'El envío de correo no está configurado.' });
+    }
+
+    try {
+        const [usuarios] = await conexion.execute(
+            'SELECT id, nombre, correo FROM usuarios WHERE correo = ? LIMIT 1',
+            [correo]
+        );
+
+        if (!usuarios.length) return res.json(respuestaGenerica);
+
+        const usuario = usuarios[0];
+        const token = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        const enlace = direccionFrontend + '/restablecer-contrasena?token=' + encodeURIComponent(token);
+
+        await conexion.execute(
+            'UPDATE recuperaciones_contrasena SET usado_en = UTC_TIMESTAMP() ' +
+            'WHERE usuario_id = ? AND usado_en IS NULL',
+            [usuario.id]
+        );
+        await conexion.execute(
+            'INSERT INTO recuperaciones_contrasena (usuario_id, token_hash, vence_en) ' +
+            'VALUES (?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 1 HOUR))',
+            [usuario.id, tokenHash]
+        );
+
+        try {
+            await crearTransportadorCorreo().sendMail({
+                from: '"BackToMe" <' + process.env.SMTP_USER + '>',
+                to: usuario.correo,
+                subject: 'Restablece tu contraseña de BackToMe',
+                text:
+                    'Hola ' + usuario.nombre + ',\n\n' +
+                    'Usa este enlace dentro de la próxima hora para elegir una contraseña nueva:\n' +
+                    enlace + '\n\n' +
+                    'Si no solicitaste este cambio, puedes ignorar este mensaje.',
+                html:
+                    '<p>Hola ' + escaparHtml(usuario.nombre) + ',</p>' +
+                    '<p>Usa este enlace dentro de la próxima hora para elegir una contraseña nueva:</p>' +
+                    '<p><a href="' + escaparHtml(enlace) + '">Restablecer contraseña</a></p>' +
+                    '<p>Si no solicitaste este cambio, puedes ignorar este mensaje.</p>'
+            });
+        } catch (error) {
+            await conexion.execute(
+                'UPDATE recuperaciones_contrasena SET usado_en = UTC_TIMESTAMP() WHERE token_hash = ?',
+                [tokenHash]
+            );
+            console.error('Error al enviar enlace de recuperación:', error.message);
+        }
+
+        res.json(respuestaGenerica);
+    } catch (error) {
+        console.error('Error al solicitar recuperación de contraseña:', error.message);
+        res.status(500).json({ mensaje: 'No se pudo procesar la solicitud. Inténtalo de nuevo.' });
+    }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+    const token = String(req.body?.token || '');
+    const contrasena = String(req.body?.password || '');
+
+    if (!/^[a-f0-9]{64}$/i.test(token)) {
+        return res.status(400).json({ mensaje: 'El enlace de recuperación no es válido o ya venció.' });
+    }
+    if (contrasena.length < 8 || contrasena.length > 128) {
+        return res.status(400).json({ mensaje: 'La contraseña debe tener entre 8 y 128 caracteres.' });
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const hashContrasena = await generarHashContrasena(contrasena);
+    const conexionUsuario = await conexion.getConnection();
+
+    try {
+        await conexionUsuario.beginTransaction();
+        const [recuperaciones] = await conexionUsuario.execute(
+            'SELECT id, usuario_id FROM recuperaciones_contrasena ' +
+            'WHERE token_hash = ? AND usado_en IS NULL ' +
+            'AND vence_en > UTC_TIMESTAMP() LIMIT 1 FOR UPDATE',
+            [tokenHash]
+        );
+
+        if (!recuperaciones.length) {
+            await conexionUsuario.rollback();
+            return res.status(400).json({ mensaje: 'El enlace de recuperación no es válido o ya venció.' });
+        }
+
+        const recuperacion = recuperaciones[0];
+        await conexionUsuario.execute(
+            'UPDATE usuarios SET contrasena_hash = ? WHERE id = ?',
+            [hashContrasena, recuperacion.usuario_id]
+        );
+        await conexionUsuario.execute(
+            'UPDATE recuperaciones_contrasena SET usado_en = UTC_TIMESTAMP() ' +
+            'WHERE usuario_id = ? AND usado_en IS NULL',
+            [recuperacion.usuario_id]
+        );
+        await conexionUsuario.execute(
+            'DELETE FROM sesiones WHERE usuario_id = ?',
+            [recuperacion.usuario_id]
+        );
+        await conexionUsuario.commit();
+
+        res.json({ mensaje: 'Contraseña actualizada. Ya puedes iniciar sesión.' });
+    } catch (error) {
+        await conexionUsuario.rollback();
+        console.error('Error al restablecer contraseña:', error.message);
+        res.status(500).json({ mensaje: 'No se pudo actualizar la contraseña. Inténtalo de nuevo.' });
     } finally {
         conexionUsuario.release();
     }
